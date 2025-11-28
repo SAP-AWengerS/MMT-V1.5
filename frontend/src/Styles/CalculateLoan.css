@@ -1,0 +1,21 @@
+/* Calculate Loan Page Styles */
+
+.loan-grid-container {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 20px;
+}
+
+@media (min-width: 768px) {
+  .loan-grid-container {
+    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+    gap: 20px;
+  }
+}
+
+@media (min-width: 1024px) {
+  .loan-grid-container {
+    grid-template-columns: repeat(4, 1fr);
+    gap: 20px;
+  }
+}
