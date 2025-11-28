@@ -136,6 +136,294 @@ const typeDefs = `#graphql
   }
 `;
 
+// GraphQL Resolvers
+const resolvers = {
+  Query: {
+    getTotalExpenses: async (_, { truckId, startDate, endDate }) => {
+      try {
+        const start = new Date(startDate);
+        const end = new Date(endDate);
+
+        const expenses = await Expense.find({
+          truckId,
+          date: { $gte: start, $lte: end }
+        });
+
+        const totalExpenses = expenses.reduce((sum, exp) => sum + exp.amount, 0);
+        const fuelExpenses = expenses
+          .filter(exp => exp.category === 'fuel')
+          .reduce((sum, exp) => sum + exp.amount, 0);
+        const defExpenses = expenses
+          .filter(exp => exp.category === 'def')
+          .reduce((sum, exp) => sum + exp.amount, 0);
+        const maintenanceExpenses = expenses
+          .filter(exp => exp.category === 'maintenance')
+          .reduce((sum, exp) => sum + exp.amount, 0);
+        const otherExpenses = expenses
+          .filter(exp => exp.category === 'other')
+          .reduce((sum, exp) => sum + exp.amount, 0);
+
+        const breakdown = [
+          { category: 'fuel', amount: fuelExpenses },
+          { category: 'def', amount: defExpenses },
+          { category: 'maintenance', amount: maintenanceExpenses },
+          { category: 'other', amount: otherExpenses }
+        ].map(item => ({
+          ...item,
+          percentage: totalExpenses > 0 ? (item.amount / totalExpenses) * 100 : 0,
+          count: expenses.filter(exp => exp.category === item.category).length
+        }));
+
+        logger.info('Total expenses queried', {
+          truckId,
+          totalExpenses,
+          period: `${startDate} to ${endDate}`
+        });
+
+        return {
+          totalExpenses,
+          fuelExpenses,
+          defExpenses,
+          maintenanceExpenses,
+          otherExpenses,
+          breakdown,
+          period: `${startDate} to ${endDate}`,
+          transactionCount: expenses.length
+        };
+      } catch (error) {
+        logger.error('Error getting total expenses', { error: error.message });
+        throw new Error('Failed to fetch total expenses');
+      }
+    },
+
+    getIncomeByTruck: async (_, { truckId, startDate, endDate }) => {
+      try {
+        const filter = { truckId };
+
+        if (startDate && endDate) {
+          filter.date = {
+            $gte: new Date(startDate),
+            $lte: new Date(endDate)
+          };
+        }
+
+        const income = await Income.find(filter).sort({ date: -1 });
+
+        logger.info('Income fetched', {
+          truckId,
+          count: income.length
+        });
+
+        return income.map(inc => ({
+          id: inc._id.toString(),
+          truckId: inc.truckId,
+          userId: inc.userId,
+          amount: inc.amount,
+          source: inc.source,
+          date: inc.date.toISOString(),
+          description: inc.description || '',
+          createdAt: inc.createdAt.toISOString()
+        }));
+      } catch (error) {
+        logger.error('Error getting income', { error: error.message });
+        throw new Error('Failed to fetch income');
+      }
+    },
+
+    getExpensesByTruck: async (_, { truckId, startDate, endDate }) => {
+      try {
+        const filter = { truckId };
+
+        if (startDate && endDate) {
+          filter.date = {
+            $gte: new Date(startDate),
+            $lte: new Date(endDate)
+          };
+        }
+
+        const expenses = await Expense.find(filter).sort({ date: -1 });
+
+        const fuelExpenses = expenses.filter(exp => exp.category === 'fuel');
+        const defExpenses = expenses.filter(exp => exp.category === 'def');
+        const maintenanceExpenses = expenses.filter(exp => exp.category === 'maintenance');
+        const otherExpenses = expenses.filter(exp => exp.category === 'other');
+        const total = expenses.reduce((sum, exp) => sum + exp.amount, 0);
+
+        const mapExpense = (exp) => ({
+          id: exp._id.toString(),
+          truckId: exp.truckId,
+          userId: exp.userId,
+          amount: exp.amount,
+          category: exp.category,
+          quantity: exp.quantity || 0,
+          pricePerUnit: exp.pricePerUnit || 0,
+          station: exp.station || '',
+          date: exp.date.toISOString(),
+          description: exp.description || '',
+          createdAt: exp.createdAt.toISOString()
+        });
+
+        return {
+          fuelExpenses: fuelExpenses.map(mapExpense),
+          defExpenses: defExpenses.map(mapExpense),
+          maintenanceExpenses: maintenanceExpenses.map(mapExpense),
+          otherExpenses: otherExpenses.map(mapExpense),
+          total
+        };
+      } catch (error) {
+        logger.error('Error getting expenses', { error: error.message });
+        throw new Error('Failed to fetch expenses');
+      }
+    },
+
+    getIncome: async (_, { userId }) => {
+      try {
+        const filter = userId ? { userId } : {};
+        const income = await Income.find(filter).sort({ date: -1 });
+
+        return income.map(inc => ({
+          id: inc._id.toString(),
+          truckId: inc.truckId,
+          userId: inc.userId,
+          amount: inc.amount,
+          source: inc.source,
+          date: inc.date.toISOString(),
+          description: inc.description || '',
+          createdAt: inc.createdAt.toISOString()
+        }));
+      } catch (error) {
+        logger.error('Error getting income', { error: error.message });
+        throw new Error('Failed to fetch income');
+      }
+    },
+
+    getExpenses: async (_, { userId }) => {
+      try {
+        const filter = userId ? { userId } : {};
+        const expenses = await Expense.find(filter).sort({ date: -1 });
+
+        return expenses.map(exp => ({
+          id: exp._id.toString(),
+          truckId: exp.truckId,
+          userId: exp.userId,
+          amount: exp.amount,
+          category: exp.category,
+          quantity: exp.quantity || 0,
+          pricePerUnit: exp.pricePerUnit || 0,
+          station: exp.station || '',
+          date: exp.date.toISOString(),
+          description: exp.description || '',
+          createdAt: exp.createdAt.toISOString()
+        }));
+      } catch (error) {
+        logger.error('Error getting expenses', { error: error.message });
+        throw new Error('Failed to fetch expenses');
+      }
+    }
+  },
+
+  Mutation: {
+    addIncome: async (_, { truckId, userId, amount, source, date, description }) => {
+      try {
+        const income = new Income({
+          truckId,
+          userId,
+          amount,
+          source,
+          date: new Date(date),
+          description
+        });
+
+        await income.save();
+
+        logger.info('Income added', {
+          incomeId: income._id,
+          truckId,
+          amount
+        });
+
+        return {
+          id: income._id.toString(),
+          truckId: income.truckId,
+          userId: income.userId,
+          amount: income.amount,
+          source: income.source,
+          date: income.date.toISOString(),
+          description: income.description || '',
+          createdAt: income.createdAt.toISOString()
+        };
+      } catch (error) {
+        logger.error('Error adding income', { error: error.message });
+        throw new Error('Failed to add income');
+      }
+    },
+
+    addExpense: async (_, { truckId, userId, amount, category, quantity, pricePerUnit, station, date, description }) => {
+      try {
+        const expense = new Expense({
+          truckId,
+          userId,
+          amount,
+          category,
+          quantity,
+          pricePerUnit,
+          station,
+          date: new Date(date),
+          description
+        });
+
+        await expense.save();
+
+        logger.info('Expense added', {
+          expenseId: expense._id,
+          truckId,
+          category,
+          amount
+        });
+
+        return {
+          id: expense._id.toString(),
+          truckId: expense.truckId,
+          userId: expense.userId,
+          amount: expense.amount,
+          category: expense.category,
+          quantity: expense.quantity || 0,
+          pricePerUnit: expense.pricePerUnit || 0,
+          station: expense.station || '',
+          date: expense.date.toISOString(),
+          description: expense.description || '',
+          createdAt: expense.createdAt.toISOString()
+        };
+      } catch (error) {
+        logger.error('Error adding expense', { error: error.message });
+        throw new Error('Failed to add expense');
+      }
+    },
+
+    deleteIncome: async (_, { id }) => {
+      try {
+        await Income.findByIdAndDelete(id);
+        logger.info('Income deleted', { incomeId: id });
+        return true;
+      } catch (error) {
+        logger.error('Error deleting income', { error: error.message });
+        return false;
+      }
+    },
+
+    deleteExpense: async (_, { id }) => {
+      try {
+        await Expense.findByIdAndDelete(id);
+        logger.info('Expense deleted', { expenseId: id });
+        return true;
+      } catch (error) {
+        logger.error('Error deleting expense', { error: error.message });
+        return false;
+      }
+    }
+  }
+};
+
 // Start server
 const startServer = async () => {
   await connectDB();
