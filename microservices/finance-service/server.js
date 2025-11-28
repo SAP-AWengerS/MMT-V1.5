@@ -1161,6 +1161,41 @@ app.get('/api/metadata/getSixMonthsDataByUserId', async (req, res) => {
   }
 });
 
+// Get profile metadata by user ID
+app.get('/api/metadata/getProfileMetadataByUserId', async (req, res) => {
+  try {
+    const { userId } = req.query;
+
+    if (!userId) {
+      return res.status(400).json({ error: 'Invalid User ID' });
+    }
+
+    // Calculate total kilometers from FuelExpense collection
+    const kmResult = await FuelExpense.aggregate([
+      { $match: { addedBy: userId } },
+      { $sort: { truckId: 1, date: -1 } },
+      { $group: { _id: "$truckId", latestKM: { $first: "$currentKM" } } },
+      { $group: { _id: null, totalKM: { $sum: "$latestKM" } } },
+      { $project: { _id: 0, totalKM: 1 } }
+    ]);
+    const totalKM = kmResult.length > 0 ? kmResult[0].totalKM : 0;
+
+    // Note: totalTrucks and totalDays require fleet-service and auth-service data
+    // For now, return 0 - these would need to be fetched via service-to-service calls
+    const result = {
+      totalKM,
+      totalTrucks: 0,  // TODO: Query fleet-service
+      totalDays: 0     // TODO: Query auth-service
+    };
+
+    logger.info('Profile metadata fetched', { userId, totalKM });
+    res.json(result);
+  } catch (error) {
+    logger.error('Error fetching profile metadata', { error: error.message });
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
 // Error handling middleware
 app.use((err, req, res, next) => {
   logger.error('Unhandled error', {
