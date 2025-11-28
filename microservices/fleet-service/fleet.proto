@@ -1,0 +1,89 @@
+syntax = "proto3";
+
+package fleet;
+
+// Fleet Service - gRPC Interface
+service FleetService {
+  // Get all trucks with optional filters
+  rpc GetTrucks(TruckQuery) returns (TruckList);
+
+  // Get a single truck by ID
+  rpc GetTruckById(TruckId) returns (Truck);
+
+  // Get all drivers with optional filters
+  rpc GetDrivers(DriverQuery) returns (DriverList);
+
+  // Get a single driver by ID
+  rpc GetDriverById(DriverId) returns (Driver);
+
+  // Stream truck status updates (for real-time monitoring)
+  rpc StreamTruckStatus(TruckId) returns (stream TruckStatus);
+}
+
+// Messages
+
+message TruckQuery {
+  optional string userId = 1;
+  optional string status = 2;  // active, inactive, maintenance
+  int32 limit = 3;
+  int32 skip = 4;
+}
+
+message TruckId {
+  string id = 1;
+}
+
+message Truck {
+  string id = 1;
+  string userId = 2;
+  string truckNumber = 3;
+  string truckName = 4;
+  string truckModel = 5;
+  int32 truckCapacity = 6;
+  string status = 7;
+  string createdAt = 8;
+  string updatedAt = 9;
+  optional Driver assignedDriver = 10;
+}
+
+message TruckList {
+  repeated Truck trucks = 1;
+  int32 total = 2;
+}
+
+message DriverQuery {
+  optional string userId = 1;
+  optional string truckId = 2;
+  optional bool available = 3;
+  int32 limit = 4;
+  int32 skip = 5;
+}
+
+message DriverId {
+  string id = 1;
+}
+
+message Driver {
+  string id = 1;
+  string userId = 2;
+  string name = 3;
+  string licenseNumber = 4;
+  string phone = 5;
+  string email = 6;
+  bool available = 7;
+  optional string assignedTruckId = 8;
+  string createdAt = 9;
+}
+
+message DriverList {
+  repeated Driver drivers = 1;
+  int32 total = 2;
+}
+
+message TruckStatus {
+  string truckId = 1;
+  string status = 2;
+  string location = 3;
+  double fuelLevel = 4;
+  string timestamp = 5;
+}
