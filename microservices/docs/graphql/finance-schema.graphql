@@ -1,0 +1,268 @@
+# Finance Service GraphQL Schema
+
+type Query {
+  # Get total expenses for a truck within a date range
+  getTotalExpenses(
+    truckId: ID!
+    startDate: String!
+    endDate: String!
+  ): ExpenseSummary!
+
+  # Get income by truck
+  getIncomeByTruck(
+    truckId: ID!
+    startDate: String
+    endDate: String
+  ): [Income!]!
+
+  # Get all expenses for a truck
+  getExpensesByTruck(
+    truckId: ID!
+    startDate: String
+    endDate: String
+  ): ExpenseDetails!
+
+  # Get financial report with filters
+  getFinancialReport(filters: ReportFilters!): FinancialReport!
+
+  # Get loan calculation
+  calculateLoan(input: LoanInput!): LoanCalculation!
+
+  # Get profit analysis
+  getProfitAnalysis(
+    truckId: ID!
+    startDate: String!
+    endDate: String!
+  ): ProfitAnalysis!
+}
+
+type Mutation {
+  # Add income
+  addIncome(input: IncomeInput!): Income!
+
+  # Add fuel expense
+  addFuelExpense(input: FuelExpenseInput!): FuelExpense!
+
+  # Add DEF expense
+  addDefExpense(input: DefExpenseInput!): DefExpense!
+
+  # Add other expense
+  addOtherExpense(input: OtherExpenseInput!): OtherExpense!
+
+  # Update income
+  updateIncome(id: ID!, input: IncomeInput!): Income!
+
+  # Delete expense
+  deleteExpense(id: ID!, type: ExpenseType!): Boolean!
+}
+
+# Types
+
+type ExpenseSummary {
+  totalExpenses: Float!
+  fuelExpenses: Float!
+  defExpenses: Float!
+  otherExpenses: Float!
+  breakdown: [ExpenseBreakdown!]!
+  period: String!
+  transactionCount: Int!
+}
+
+type ExpenseBreakdown {
+  category: String!
+  amount: Float!
+  percentage: Float!
+  count: Int!
+}
+
+type Income {
+  id: ID!
+  truckId: ID!
+  userId: ID!
+  amount: Float!
+  source: String!
+  date: String!
+  description: String
+  createdAt: String!
+  updatedAt: String!
+}
+
+type ExpenseDetails {
+  fuelExpenses: [FuelExpense!]!
+  defExpenses: [DefExpense!]!
+  otherExpenses: [OtherExpense!]!
+  total: Float!
+}
+
+type FuelExpense {
+  id: ID!
+  truckId: ID!
+  userId: ID!
+  amount: Float!
+  quantity: Float!
+  pricePerUnit: Float!
+  station: String
+  date: String!
+  createdAt: String!
+}
+
+type DefExpense {
+  id: ID!
+  truckId: ID!
+  userId: ID!
+  amount: Float!
+  quantity: Float!
+  date: String!
+  createdAt: String!
+}
+
+type OtherExpense {
+  id: ID!
+  truckId: ID!
+  userId: ID!
+  amount: Float!
+  category: String!
+  description: String
+  date: String!
+  createdAt: String!
+}
+
+type FinancialReport {
+  summary: ReportSummary!
+  income: [Income!]!
+  expenses: ExpenseDetails!
+  profitLoss: Float!
+  period: String!
+  trucks: [TruckFinancials!]!
+}
+
+type ReportSummary {
+  totalIncome: Float!
+  totalExpenses: Float!
+  netProfit: Float!
+  profitMargin: Float!
+  topExpenseCategory: String!
+  averageExpensePerTruck: Float!
+}
+
+type TruckFinancials {
+  truckId: ID!
+  truckNumber: String!
+  income: Float!
+  expenses: Float!
+  profit: Float!
+  profitMargin: Float!
+}
+
+type LoanCalculation {
+  principal: Float!
+  interestRate: Float!
+  termMonths: Int!
+  monthlyPayment: Float!
+  totalPayment: Float!
+  totalInterest: Float!
+  schedule: [PaymentSchedule!]!
+}
+
+type PaymentSchedule {
+  month: Int!
+  payment: Float!
+  principal: Float!
+  interest: Float!
+  balance: Float!
+}
+
+type ProfitAnalysis {
+  totalIncome: Float!
+  totalExpenses: Float!
+  netProfit: Float!
+  profitMargin: Float!
+  expenseRatio: Float!
+  trends: [ProfitTrend!]!
+  recommendations: [String!]!
+}
+
+type ProfitTrend {
+  period: String!
+  income: Float!
+  expenses: Float!
+  profit: Float!
+}
+
+# Input Types
+
+input IncomeInput {
+  truckId: ID!
+  amount: Float!
+  source: String!
+  date: String!
+  description: String
+}
+
+input FuelExpenseInput {
+  truckId: ID!
+  amount: Float!
+  quantity: Float!
+  pricePerUnit: Float!
+  station: String
+  date: String!
+}
+
+input DefExpenseInput {
+  truckId: ID!
+  amount: Float!
+  quantity: Float!
+  date: String!
+}
+
+input OtherExpenseInput {
+  truckId: ID!
+  amount: Float!
+  category: String!
+  description: String
+  date: String!
+}
+
+input ReportFilters {
+  userId: ID
+  truckId: ID
+  startDate: String!
+  endDate: String!
+  includeIncome: Boolean
+  includeExpenses: Boolean
+  groupBy: GroupBy
+}
+
+input LoanInput {
+  principal: Float!
+  interestRate: Float!
+  termMonths: Int!
+}
+
+# Enums
+
+enum ExpenseType {
+  FUEL
+  DEF
+  OTHER
+}
+
+enum GroupBy {
+  TRUCK
+  CATEGORY
+  MONTH
+  WEEK
+}
+
+# Subscriptions (for real-time updates)
+
+type Subscription {
+  # Subscribe to expense updates
+  expenseAdded(truckId: ID!): ExpenseDetails!
+
+  # Subscribe to income updates
+  incomeAdded(truckId: ID!): Income!
+
+  # Subscribe to financial summary updates
+  financialSummaryUpdated(userId: ID!): ExpenseSummary!
+}
