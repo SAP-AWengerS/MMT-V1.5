@@ -87,3 +87,36 @@ app.get('/health', (req, res) => {
   };
   res.status(healthcheck.database === 'connected' ? 200 : 503).json(healthcheck);
 });
+
+// Error handling middleware
+app.use((err, req, res, next) => {
+  logger.error('Unhandled error', {
+    error: err.message,
+    stack: err.stack,
+    path: req.path
+  });
+
+  res.status(500).json({
+    error: 'Internal server error',
+    message: process.env.NODE_ENV === 'development' ? err.message : 'Something went wrong'
+  });
+});
+
+// Start server
+const startServer = async () => {
+  await connectDB();
+
+  app.listen(PORT, () => {
+    logger.info(`Finance Service REST API running on port ${PORT}`, {
+      environment: process.env.NODE_ENV || 'development',
+      database: 'mmt_finance_db'
+    });
+    console.log(`💰 Finance Service REST API running on port ${PORT}`);
+    console.log(`📊 Health check: http://localhost:${PORT}/health`);
+    console.log(`💾 Database: mmt_finance_db`);
+  });
+};
+
+startServer();
+
+module.exports = app;
