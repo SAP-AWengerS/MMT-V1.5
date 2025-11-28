@@ -795,6 +795,35 @@ app.delete('/api/expenses/:id', async (req, res) => {
   }
 });
 
+// Excel Download Placeholders
+app.get('/api/expenses/fuel/download', (req, res) => {
+  res.status(501).json({ message: 'Excel download not yet implemented' });
+});
+
+app.get('/api/expenses/fuel/download-all', (req, res) => {
+  res.status(501).json({ message: 'Excel download not yet implemented' });
+});
+
+app.get('/api/expenses/def/download', (req, res) => {
+  res.status(501).json({ message: 'Excel download not yet implemented' });
+});
+
+app.get('/api/expenses/def/download-all', (req, res) => {
+  res.status(501).json({ message: 'Excel download not yet implemented' });
+});
+
+app.get('/api/expenses/other/download', (req, res) => {
+  res.status(501).json({ message: 'Excel download not yet implemented' });
+});
+
+app.get('/api/expenses/other/download-all', (req, res) => {
+  res.status(501).json({ message: 'Excel download not yet implemented' });
+});
+
+app.get('/api/expenses/total/download-all', (req, res) => {
+  res.status(501).json({ message: 'Excel download not yet implemented' });
+});
+
 // Error handling middleware
 app.use((err, req, res, next) => {
   logger.error('Unhandled error', {
