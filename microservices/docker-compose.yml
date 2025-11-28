@@ -1,0 +1,191 @@
+version: '3.8'
+
+services:
+  # MongoDB Database
+  mongodb:
+    image: mongo:7.0
+    container_name: mmt-mongodb
+    restart: always
+    ports:
+      - "27017:27017"
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: admin
+      MONGO_INITDB_ROOT_PASSWORD: password
+    volumes:
+      - mongodb_data:/data/db
+    networks:
+      - mmt-network
+
+  # RabbitMQ Message Broker
+  rabbitmq:
+    image: rabbitmq:3.12-management
+    container_name: mmt-rabbitmq
+    restart: always
+    ports:
+      - "5672:5672"   # AMQP port
+      - "15672:15672" # Management UI
+    environment:
+      RABBITMQ_DEFAULT_USER: admin
+      RABBITMQ_DEFAULT_PASS: password
+    volumes:
+      - rabbitmq_data:/var/lib/rabbitmq
+    networks:
+      - mmt-network
+
+  # API Gateway
+  api-gateway:
+    build: ./api-gateway
+    container_name: mmt-api-gateway
+    restart: always
+    ports:
+      - "5001:5001"
+    environment:
+      PORT: 5001
+      JWT_SECRET: your-secret-key-change-in-production
+      AUTH_SERVICE_URL: http://auth-service:3001
+      FLEET_SERVICE_URL: http://fleet-service:3002
+      FINANCE_SERVICE_URL: http://finance-service:3003
+      ANALYTICS_SERVICE_URL: http://analytics-service:3004
+      NOTIFICATION_SERVICE_URL: http://notification-service:3005
+      NODE_ENV: production
+    depends_on:
+      - auth-service
+      - fleet-service
+      - finance-service
+      - analytics-service
+      - notification-service
+    networks:
+      - mmt-network
+    healthcheck:
+      test: ["CMD", "node", "-e", "require('http').get('http://localhost:5001/health')"]
+      interval: 30s
+      timeout: 3s
+      retries: 3
+
+  # Auth Service
+  auth-service:
+    build: ./auth-service
+    container_name: mmt-auth-service
+    restart: always
+    ports:
+      - "3001:3001"
+    environment:
+      PORT: 3001
+      MONGODB_URI: mongodb://admin:password@mongodb:27017/mmt_auth_db?authSource=admin
+      JWT_SECRET: your-secret-key-change-in-production
+      JWT_EXPIRY: 7d
+      GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID}
+      NODE_ENV: production
+    depends_on:
+      - mongodb
+    networks:
+      - mmt-network
+    healthcheck:
+      test: ["CMD", "node", "-e", "require('http').get('http://localhost:3001/health')"]
+      interval: 30s
+      timeout: 3s
+      retries: 3
+
+  # Fleet Service
+  fleet-service:
+    build: ./fleet-service
+    container_name: mmt-fleet-service
+    restart: always
+    ports:
+      - "3002:3002"
+      - "50051:50051"  # gRPC port
+    environment:
+      PORT: 3002
+      GRPC_PORT: 50051
+      MONGODB_URI: mongodb://admin:password@mongodb:27017/mmt_fleet_db?authSource=admin
+      NODE_ENV: production
+    depends_on:
+      - mongodb
+    networks:
+      - mmt-network
+    healthcheck:
+      test: ["CMD", "node", "-e", "require('http').get('http://localhost:3002/health')"]
+      interval: 30s
+      timeout: 3s
+      retries: 3
+
+  # Finance Service
+  finance-service:
+    build: ./finance-service
+    container_name: mmt-finance-service
+    restart: always
+    ports:
+      - "3003:3003"
+    environment:
+      PORT: 3003
+      MONGODB_URI: mongodb://admin:password@mongodb:27017/mmt_finance_db?authSource=admin
+      FLEET_SERVICE_URL: http://fleet-service:3002
+      NODE_ENV: production
+    depends_on:
+      - mongodb
+      - fleet-service
+    networks:
+      - mmt-network
+    healthcheck:
+      test: ["CMD", "node", "-e", "require('http').get('http://localhost:3003/health')"]
+      interval: 30s
+      timeout: 3s
+      retries: 3
+
+  # Analytics Service
+  analytics-service:
+    build: ./analytics-service
+    container_name: mmt-analytics-service
+    restart: always
+    ports:
+      - "3004:3004"
+      - "50052:50052"  # gRPC port
+    environment:
+      PORT: 3004
+      GRPC_PORT: 50052
+      MONGODB_URI: mongodb://admin:password@mongodb:27017/mmt_analytics_db?authSource=admin
+      FLEET_GRPC_URL: fleet-service:50051
+      NODE_ENV: production
+    depends_on:
+      - mongodb
+      - fleet-service
+    networks:
+      - mmt-network
+    healthcheck:
+      test: ["CMD", "node", "-e", "require('http').get('http://localhost:3004/health')"]
+      interval: 30s
+      timeout: 3s
+      retries: 3
+
+  # Notification Service
+  notification-service:
+    build: ./notification-service
+    container_name: mmt-notification-service
+    restart: always
+    ports:
+      - "3005:3005"
+    environment:
+      PORT: 3005
+      MONGODB_URI: mongodb://admin:password@mongodb:27017/mmt_notifications_db?authSource=admin
+      RABBITMQ_URL: amqp://admin:password@rabbitmq:5672
+      NODE_ENV: production
+    depends_on:
+      - mongodb
+      - rabbitmq
+    networks:
+      - mmt-network
+    healthcheck:
+      test: ["CMD", "node", "-e", "require('http').get('http://localhost:3005/health')"]
+      interval: 30s
+      timeout: 3s
+      retries: 3
+
+volumes:
+  mongodb_data:
+    driver: local
+  rabbitmq_data:
+    driver: local
+
+networks:
+  mmt-network:
+    driver: bridge
