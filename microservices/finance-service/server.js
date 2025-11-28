@@ -1068,6 +1068,99 @@ app.get('/api/metadata/getMetadataByUserId', async (req, res) => {
   }
 });
 
+// Get six months data by user ID
+app.get('/api/metadata/getSixMonthsDataByUserId', async (req, res) => {
+  try {
+    const { userId } = req.query;
+
+    if (!userId) {
+      return res.status(400).json({ error: 'Invalid User ID' });
+    }
+
+    const moment = require('moment');
+
+    // Get the last 6 months
+    const months = [];
+    for (let i = 5; i >= 0; i--) {
+      const monthStart = moment().subtract(i, 'months').startOf('month').toDate();
+      const monthEnd = moment().subtract(i, 'months').endOf('month').toDate();
+      const monthName = moment().subtract(i, 'months').format('MMM');
+
+      months.push({
+        name: monthName,
+        start: monthStart,
+        end: monthEnd
+      });
+    }
+
+    const expensesData = [];
+    const incomeData = [];
+
+    // Process each month
+    for (const month of months) {
+      // Fuel expenses
+      const fuelResult = await FuelExpense.aggregate([
+        { $match: { addedBy: userId, date: { $gte: month.start, $lte: month.end } } },
+        { $group: { _id: null, totalCost: { $sum: "$cost" } } }
+      ]);
+      const fuelTotal = fuelResult.length > 0 ? fuelResult[0].totalCost : 0;
+
+      // DEF expenses
+      const defResult = await DefExpense.aggregate([
+        { $match: { addedBy: userId, date: { $gte: month.start, $lte: month.end } } },
+        { $group: { _id: null, totalCost: { $sum: "$cost" } } }
+      ]);
+      const defTotal = defResult.length > 0 ? defResult[0].totalCost : 0;
+
+      // Other expenses
+      const otherResult = await OtherExpense.aggregate([
+        { $match: { addedBy: userId, date: { $gte: month.start, $lte: month.end } } },
+        { $group: { _id: null, totalCost: { $sum: "$cost" } } }
+      ]);
+      const otherTotal = otherResult.length > 0 ? otherResult[0].totalCost : 0;
+
+      // Loan expenses
+      const loanResult = await Expense.aggregate([
+        { $match: { addedBy: userId, category: 'loan_calculation', date: { $gte: month.start, $lte: month.end } } },
+        { $group: { _id: null, totalCost: { $sum: "$amount" } } }
+      ]);
+      const loanTotal = loanResult.length > 0 ? loanResult[0].totalCost : 0;
+
+      // Income
+      const incomeResult = await Income.aggregate([
+        { $match: { addedBy: userId, date: { $gte: month.start, $lte: month.end } } },
+        { $group: { _id: null, totalAmount: { $sum: "$amount" } } }
+      ]);
+      const incomeTotal = incomeResult.length > 0 ? incomeResult[0].totalAmount : 0;
+
+      // Add to expensesData array - EXACT format as backend
+      expensesData.push(
+        { time: month.name, value: fuelTotal, type: 'Fuel' },
+        { time: month.name, value: defTotal, type: 'Def' },
+        { time: month.name, value: otherTotal, type: 'Other' },
+        { time: month.name, value: loanTotal, type: 'Loan' }
+      );
+
+      // Add to incomeData array - EXACT format as backend
+      incomeData.push({
+        time: month.name,
+        Income: incomeTotal
+      });
+    }
+
+    const result = {
+      expensesData,
+      incomeData
+    };
+
+    logger.info('Six months data fetched', { userId, expenseRecords: expensesData.length });
+    res.json(result);
+  } catch (error) {
+    logger.error('Error fetching six months data', { error: error.message });
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
 // Error handling middleware
 app.use((err, req, res, next) => {
   logger.error('Unhandled error', {
