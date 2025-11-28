@@ -1,0 +1,44 @@
+# Application Configuration ConfigMap
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: app-config
+  namespace: mmt
+  labels:
+    app: mmt
+data:
+  # Common Configuration
+  NODE_ENV: "production"
+  LOG_LEVEL: "info"
+
+  # API Gateway Configuration
+  API_GATEWAY_PORT: "5001"
+
+  # Service Ports
+  AUTH_SERVICE_PORT: "3001"
+  FLEET_SERVICE_PORT: "3002"
+  FINANCE_SERVICE_PORT: "3003"
+  ANALYTICS_SERVICE_PORT: "3004"
+  NOTIFICATION_SERVICE_PORT: "3005"
+
+  # gRPC Ports
+  FLEET_GRPC_PORT: "50051"
+  ANALYTICS_GRPC_PORT: "50052"
+
+  # Service URLs (internal cluster DNS)
+  AUTH_SERVICE_URL: "http://auth-service:3001"
+  FLEET_SERVICE_URL: "http://fleet-service:3002"
+  FINANCE_SERVICE_URL: "http://finance-service:3003"
+  ANALYTICS_SERVICE_URL: "http://analytics-service:3004"
+  NOTIFICATION_SERVICE_URL: "http://notification-service:3005"
+  FLEET_GRPC_URL: "fleet-service:50051"
+
+  # JWT Configuration
+  JWT_EXPIRY: "7d"
+
+  # MongoDB Configuration
+  MONGODB_PORT: "27017"
+
+  # RabbitMQ Configuration
+  RABBITMQ_PORT: "5672"
+  RABBITMQ_MANAGEMENT_PORT: "15672"
