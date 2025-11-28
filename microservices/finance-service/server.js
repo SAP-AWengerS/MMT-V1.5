@@ -941,6 +941,133 @@ app.get('/api/calculate-loan/download-all', (req, res) => {
   res.status(501).json({ message: 'Excel download not yet implemented' });
 });
 
+// ==================== METADATA ROUTES ====================
+
+// Get metadata by user ID
+app.get('/api/metadata/getMetadataByUserId', async (req, res) => {
+  try {
+    const { userId } = req.query;
+
+    if (!userId) {
+      return res.status(400).json({ error: 'Invalid User ID' });
+    }
+
+    const now = new Date();
+    const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+    const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+
+    // Total fuel expenses
+    const fuelResult = await FuelExpense.aggregate([
+      { $match: { addedBy: userId } },
+      { $group: { _id: null, totalCost: { $sum: "$cost" } } }
+    ]);
+    const fuelTotal = fuelResult.length > 0 ? fuelResult[0].totalCost : 0;
+
+    // Total DEF expenses
+    const defResult = await DefExpense.aggregate([
+      { $match: { addedBy: userId } },
+      { $group: { _id: null, totalCost: { $sum: "$cost" } } }
+    ]);
+    const defTotal = defResult.length > 0 ? defResult[0].totalCost : 0;
+
+    // Total other expenses
+    const otherResult = await OtherExpense.aggregate([
+      { $match: { addedBy: userId } },
+      { $group: { _id: null, totalCost: { $sum: "$cost" } } }
+    ]);
+    const otherTotal = otherResult.length > 0 ? otherResult[0].totalCost : 0;
+
+    // Total loan expenses
+    const loanResult = await Expense.aggregate([
+      { $match: { addedBy: userId, category: 'loan_calculation' } },
+      { $group: { _id: null, totalCost: { $sum: "$amount" } } }
+    ]);
+    const loanTotal = loanResult.length > 0 ? loanResult[0].totalCost : 0;
+
+    // Total fuel used
+    const fuelUsedResult = await FuelExpense.aggregate([
+      { $match: { addedBy: userId } },
+      { $group: { _id: null, totalCost: { $sum: "$litres" } } }
+    ]);
+    const fuelUsedTotal = fuelUsedResult.length > 0 ? fuelUsedResult[0].totalCost : 0;
+
+    // Monthly fuel expenses
+    const fuelMonthlyResult = await FuelExpense.aggregate([
+      { $match: { addedBy: userId, date: { $gte: startOfMonth, $lte: endOfMonth } } },
+      { $group: { _id: null, totalCost: { $sum: "$cost" } } }
+    ]);
+    const fuelMonthlyTotal = fuelMonthlyResult.length > 0 ? fuelMonthlyResult[0].totalCost : 0;
+
+    // Monthly DEF expenses
+    const defMonthlyResult = await DefExpense.aggregate([
+      { $match: { addedBy: userId, date: { $gte: startOfMonth, $lte: endOfMonth } } },
+      { $group: { _id: null, totalCost: { $sum: "$cost" } } }
+    ]);
+    const defMonthlyTotal = defMonthlyResult.length > 0 ? defMonthlyResult[0].totalCost : 0;
+
+    // Monthly other expenses
+    const otherMonthlyResult = await OtherExpense.aggregate([
+      { $match: { addedBy: userId, date: { $gte: startOfMonth, $lte: endOfMonth } } },
+      { $group: { _id: null, totalCost: { $sum: "$cost" } } }
+    ]);
+    const otherMonthlyTotal = otherMonthlyResult.length > 0 ? otherMonthlyResult[0].totalCost : 0;
+
+    // Monthly loan expenses
+    const loanMonthlyResult = await Expense.aggregate([
+      { $match: { addedBy: userId, category: 'loan_calculation', date: { $gte: startOfMonth, $lte: endOfMonth } } },
+      { $group: { _id: null, totalCost: { $sum: "$amount" } } }
+    ]);
+    const loanMonthlyTotal = loanMonthlyResult.length > 0 ? loanMonthlyResult[0].totalCost : 0;
+
+    // Monthly fuel used
+    const fuelUsedMonthlyResult = await FuelExpense.aggregate([
+      { $match: { addedBy: userId, date: { $gte: startOfMonth, $lte: endOfMonth } } },
+      { $group: { _id: null, totalCost: { $sum: "$litres" } } }
+    ]);
+    const fuelUsedMonthlyTotal = fuelUsedMonthlyResult.length > 0 ? fuelUsedMonthlyResult[0].totalCost : 0;
+
+    // Total income
+    const incomeResult = await Income.aggregate([
+      { $match: { addedBy: userId } },
+      { $group: { _id: null, totalAmount: { $sum: "$amount" } } }
+    ]);
+    const incomeTotal = incomeResult.length > 0 ? incomeResult[0].totalAmount : 0;
+
+    // Monthly income
+    const incomeMonthlyResult = await Income.aggregate([
+      { $match: { addedBy: userId, date: { $gte: startOfMonth, $lte: endOfMonth } } },
+      { $group: { _id: null, totalAmount: { $sum: "$amount" } } }
+    ]);
+    const incomeMonthlyTotal = incomeMonthlyResult.length > 0 ? incomeMonthlyResult[0].totalAmount : 0;
+
+    // Combine results - EXACT format as backend
+    const totalExpenses = {
+      fuelTotal,
+      defTotal,
+      otherTotal,
+      loanTotal,
+      fuelUsedTotal,
+      incomeTotal,
+      grandTotal: fuelTotal + defTotal + otherTotal + loanTotal,
+      monthlyExpenses: {
+        fuel: fuelMonthlyTotal,
+        def: defMonthlyTotal,
+        other: otherMonthlyTotal,
+        loan: loanMonthlyTotal,
+        fuelUsed: fuelUsedMonthlyTotal,
+        income: incomeMonthlyTotal,
+        monthlyGrandTotal: fuelMonthlyTotal + defMonthlyTotal + otherMonthlyTotal + loanMonthlyTotal
+      }
+    };
+
+    logger.info('Metadata fetched by user', { userId, grandTotal: totalExpenses.grandTotal });
+    res.json(totalExpenses);
+  } catch (error) {
+    logger.error('Error fetching metadata by user', { error: error.message });
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
 // Error handling middleware
 app.use((err, req, res, next) => {
   logger.error('Unhandled error', {
