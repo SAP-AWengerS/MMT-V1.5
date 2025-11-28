@@ -1196,6 +1196,64 @@ app.get('/api/metadata/getProfileMetadataByUserId', async (req, res) => {
   }
 });
 
+// Get metadata by truck ID
+app.get('/api/metadata/getMetadataByTruckId', async (req, res) => {
+  try {
+    const { truckId } = req.query;
+
+    if (!truckId) {
+      return res.status(400).json({ error: 'Invalid truck ID' });
+    }
+
+    const moment = require('moment');
+    const startOfMonth = moment().startOf('month').toDate();
+    const endOfMonth = moment().endOf('month').toDate();
+
+    // Fuel expenses
+    const fuelResult = await FuelExpense.aggregate([
+      { $match: { truckId: truckId, date: { $gte: startOfMonth, $lte: endOfMonth } } },
+      { $group: { _id: null, totalCost: { $sum: "$cost" } } }
+    ]);
+    const fuelTotal = fuelResult.length > 0 ? fuelResult[0].totalCost : 0;
+
+    // DEF expenses
+    const defResult = await DefExpense.aggregate([
+      { $match: { truckId: truckId, date: { $gte: startOfMonth, $lte: endOfMonth } } },
+      { $group: { _id: null, totalCost: { $sum: "$cost" } } }
+    ]);
+    const defTotal = defResult.length > 0 ? defResult[0].totalCost : 0;
+
+    // Other expenses
+    const otherResult = await OtherExpense.aggregate([
+      { $match: { truckId: truckId, date: { $gte: startOfMonth, $lte: endOfMonth } } },
+      { $group: { _id: null, totalCost: { $sum: "$cost" } } }
+    ]);
+    const otherTotal = otherResult.length > 0 ? otherResult[0].totalCost : 0;
+
+    // Income
+    const incomeResult = await Income.aggregate([
+      { $match: { truckId: truckId, date: { $gte: startOfMonth, $lte: endOfMonth } } },
+      { $group: { _id: null, totalAmount: { $sum: "$amount" } } }
+    ]);
+    const incomeTotal = incomeResult.length > 0 ? incomeResult[0].totalAmount : 0;
+
+    // EXACT format as backend
+    const totalExpenses = {
+      fuelTotal,
+      defTotal,
+      otherTotal,
+      incomeTotal,
+      grandTotal: fuelTotal + defTotal + otherTotal
+    };
+
+    logger.info('Metadata fetched by truck', { truckId, grandTotal: totalExpenses.grandTotal });
+    res.json(totalExpenses);
+  } catch (error) {
+    logger.error('Error fetching metadata by truck', { error: error.message });
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
 // Error handling middleware
 app.use((err, req, res, next) => {
   logger.error('Unhandled error', {
