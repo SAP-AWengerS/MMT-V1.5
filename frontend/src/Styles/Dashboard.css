@@ -1,0 +1,115 @@
+.primary {
+    background: linear-gradient(135deg, #0a3d2f, #1aa54b );
+    color: white;
+}
+
+/* Dashboard responsive grid containers */
+.dashboard-card-container {
+    height: 100%;
+    background: white;
+    border-radius: 8px;
+    padding: 16px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    transition: box-shadow 0.3s ease;
+}
+
+.dashboard-card-container:hover {
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+/* Ensure consistent spacing across different card types */
+.dashboard-grid-row {
+    margin-bottom: 16px;
+}
+
+.dashboard-grid-row:last-child {
+    margin-bottom: 0;
+}
+
+/* Statistics Carousel Styles */
+.statistics-carousel-container {
+    width: 100%;
+    margin-bottom: 16px;
+}
+
+.statistics-carousel {
+    display: flex;
+    gap: 16px;
+    overflow-x: auto;
+    overflow-y: hidden;
+    padding: 4px 0;
+    scroll-behavior: smooth;
+    -webkit-overflow-scrolling: touch; /* Smooth scrolling on iOS */
+}
+
+/* Hide scrollbar for clean appearance */
+.statistics-carousel::-webkit-scrollbar {
+    height: 4px;
+}
+
+.statistics-carousel::-webkit-scrollbar-track {
+    background: #f1f1f1;
+    border-radius: 10px;
+}
+
+.statistics-carousel::-webkit-scrollbar-thumb {
+    background: #c1c1c1;
+    border-radius: 10px;
+}
+
+.statistics-carousel::-webkit-scrollbar-thumb:hover {
+    background: #a8a8a8;
+}
+
+/* Firefox scrollbar styling */
+.statistics-carousel {
+    scrollbar-width: thin;
+    scrollbar-color: #c1c1c1 #f1f1f1;
+}
+
+/* Ensure StatisticCard maintains its width in carousel */
+.statistics-carousel > * {
+    flex: 0 0 auto;
+    min-width: 200px; /* Minimum width for each card */
+}
+
+/* Responsive behavior for statistics carousel */
+@media (min-width: 768px) {
+    .statistics-carousel > * {
+        min-width: 220px;
+    }
+}
+
+@media (min-width: 1024px) {
+    .statistics-carousel > * {
+        min-width: 240px;
+    }
+
+    /* On larger screens, show grid instead of carousel */
+    .statistics-carousel {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+        overflow-x: visible;
+        gap: 20px;
+    }
+}
+
+@media (min-width: 1400px) {
+    /* On very large screens, fix to 5 columns */
+    .statistics-carousel {
+        grid-template-columns: repeat(5, 1fr);
+    }
+}
+
+/* Custom responsive breakpoints for dashboard components */
+@media (max-width: 576px) {
+    .dashboard-card-container {
+        padding: 12px;
+    }
+}
+
+@media (min-width: 1200px) {
+    .dashboard-card-container {
+        padding: 20px;
+    }
+}
