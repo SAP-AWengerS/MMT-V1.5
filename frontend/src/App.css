@@ -1,0 +1,199 @@
+.App {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+    "Helvetica Neue", Arial, "Noto Sans", sans-serif, "Apple Color Emoji",
+    "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";
+}
+
+/* ========================= GLOBAL BUTTON STYLES ========================= */
+
+/* Green gradient for all primary buttons */
+.ant-btn-primary {
+  background: linear-gradient(135deg, #0a3d2f, #1aa54b) !important;
+  border: none !important;
+}
+
+.ant-btn-primary:hover {
+  background: linear-gradient(135deg, #0c4a39, #1ec157) !important;
+  box-shadow: 0 2px 8px rgba(26, 165, 75, 0.3) !important;
+}
+
+.ant-btn-primary:active,
+.ant-btn-primary:focus {
+  background: linear-gradient(135deg, #083327, #149440) !important;
+}
+
+/* Red gradient button for unsubscribe action */
+.btn-red-gradient.ant-btn-primary {
+  background: linear-gradient(135deg, #ff4d4f 0%, #cf1322 100%) !important;
+  border: none !important;
+}
+
+.btn-red-gradient.ant-btn-primary:hover {
+  background: linear-gradient(135deg, #ff7875 0%, #f5222d 100%) !important;
+  box-shadow: 0 2px 8px rgba(255, 77, 79, 0.3) !important;
+}
+
+.btn-red-gradient.ant-btn-primary:active,
+.btn-red-gradient.ant-btn-primary:focus {
+  background: linear-gradient(135deg, #d9363e 0%, #a8071a 100%) !important;
+}
+
+/* Red gradient for all Ant Design danger buttons */
+.ant-btn-dangerous.ant-btn-primary,
+.ant-btn-primary[danger] {
+  background: linear-gradient(135deg, #ff4d4f 0%, #cf1322 100%) !important;
+  border: none !important;
+}
+
+.ant-btn-dangerous.ant-btn-primary:hover,
+.ant-btn-primary[danger]:hover {
+  background: linear-gradient(135deg, #ff7875 0%, #f5222d 100%) !important;
+  box-shadow: 0 2px 8px rgba(255, 77, 79, 0.3) !important;
+}
+
+.ant-btn-dangerous.ant-btn-primary:active,
+.ant-btn-dangerous.ant-btn-primary:focus,
+.ant-btn-primary[danger]:active,
+.ant-btn-primary[danger]:focus {
+  background: linear-gradient(135deg, #d9363e 0%, #a8071a 100%) !important;
+}
+
+/* Red gradient for bootstrap danger buttons */
+.btn-danger {
+  background: linear-gradient(135deg, #ff4d4f 0%, #cf1322 100%) !important;
+  border: none !important;
+  color: #fff !important;
+}
+
+.btn-danger:hover {
+  background: linear-gradient(135deg, #ff7875 0%, #f5222d 100%) !important;
+  box-shadow: 0 2px 8px rgba(255, 77, 79, 0.3) !important;
+}
+
+.btn-danger:active,
+.btn-danger:focus {
+  background: linear-gradient(135deg, #d9363e 0%, #a8071a 100%) !important;
+}
+
+/* Green gradient for FloatButton primary type */
+.ant-float-btn-primary .ant-float-btn-body {
+  background: linear-gradient(135deg, #0a3d2f, #1aa54b) !important;
+  border: none !important;
+}
+
+.ant-float-btn-primary:hover .ant-float-btn-body {
+  background: linear-gradient(135deg, #0c4a39, #1ec157) !important;
+  box-shadow: 0 2px 8px rgba(26, 165, 75, 0.3) !important;
+}
+
+.ant-float-btn-primary:active .ant-float-btn-body,
+.ant-float-btn-primary:focus .ant-float-btn-body {
+  background: linear-gradient(135deg, #083327, #149440) !important;
+}
+
+/* ========================= ANT DESIGN GLOBAL CUSTOMIZATIONS ========================= */
+
+/* Custom Ant Design Spin (Loader/Spinner) styling with green gradient theme */
+.ant-spin-dot-item {
+  background-color: #1aa54b !important;
+}
+
+.ant-spin-dot {
+  color: #1aa54b !important;
+}
+
+.ant-spin-lg .ant-spin-dot-item {
+  background-color: #1aa54b !important;
+}
+
+.ant-spin-spinning .ant-spin-dot-item {
+  background: linear-gradient(135deg, #0a3d2f, #1aa54b) !important;
+}
+
+/* Ant Design Table Global Styles */
+.ant-table-thead > tr > th {
+  background: #fafafa !important;
+  color: #333 !important;
+  font-weight: 600 !important;
+  text-align: center !important;
+  border-bottom: 1px solid #e0e0e0 !important;
+}
+
+.ant-table-tbody > tr > td {
+  text-align: left;
+}
+
+.ant-table-tbody > tr:hover > td {
+  background-color: #f5f5f5 !important;
+}
+
+/* ========================= GLOBAL UTILITY STYLES ========================= */
+
+.App-logo {
+  height: 40vmin;
+  pointer-events: none;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .App-logo {
+    animation: App-logo-spin infinite 20s linear;
+  }
+}
+
+.App-header {
+  background-color: #282c34;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  font-size: calc(10px + 2vmin);
+  color: white;
+}
+
+.App-link {
+  color: #61dafb;
+}
+
+@keyframes App-logo-spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.compShadow {
+  box-shadow: 2px 3px 7px 2px #a6a6a6;
+}
+
+/* Dashboard grid container - shared across dashboard and other pages */
+.dashboard-grid-container {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 20px;
+}
+
+@media (min-width: 768px) {
+  .dashboard-grid-container {
+    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+    gap: 20px;
+  }
+}
+
+@media (min-width: 1024px) {
+  .dashboard-grid-container {
+    grid-template-columns: repeat(4, 1fr);
+    gap: 20px;
+  }
+}
