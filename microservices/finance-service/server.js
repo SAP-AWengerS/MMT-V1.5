@@ -353,6 +353,448 @@ app.get('/api/incomes/download-all', async (req, res) => {
   res.status(501).json({ message: 'Excel download not yet implemented' });
 });
 
+// ==================== EXPENSE ROUTES (Unified) ====================
+
+// Add Expense (handles fuel, def, other)
+app.post('/api/expenses', async (req, res) => {
+  try {
+    const { type, addedBy, truckId, amount, category, quantity, pricePerUnit, station, date, description, otherType,
+            cost, litres, currentKM, note } = req.body;
+
+    let expense;
+    const expenseType = type || category;
+
+    if (expenseType === 'fuel') {
+      expense = new FuelExpense({
+        addedBy,
+        truckId,
+        currentKM: currentKM || 0,
+        litres: litres || quantity || 0,
+        cost: cost || amount || (quantity * pricePerUnit) || 0,
+        date: new Date(date),
+        note: note || description || ''
+      });
+    } else if (expenseType === 'def') {
+      // DEF uses same fields as Fuel: cost, litres, currentKM
+      expense = new DefExpense({
+        addedBy,
+        truckId,
+        currentKM: currentKM || 0,
+        litres: litres || quantity || 0,
+        cost: cost || amount || (quantity * pricePerUnit) || 0,
+        date: new Date(date),
+        note: note || description || ''
+      });
+    } else {
+      // Other expenses - match OtherExpense model fields
+      expense = new OtherExpense({
+        addedBy,
+        truckId,
+        category: category || 'Other',           // Required field
+        cost: cost || amount || 0,               // Required field (not 'amount')
+        date: new Date(date),
+        note: note || description || '',         // Optional field (not 'description')
+        other: otherType || ''                   // Optional field
+      });
+    }
+
+    await expense.save();
+    logger.info('Expense added', { expenseId: expense._id, type: expenseType });
+    res.status(201).json(expense);
+  } catch (error) {
+    logger.error('Error adding expense', { error: error.message });
+    res.status(500).json({ message: 'Failed to add expense', error: error.message });
+  }
+});
+
+// Get Fuel Expenses by Truck
+app.get('/api/expenses/fuel/by-truck', async (req, res) => {
+  try {
+    const { truckId, startDate, endDate } = req.query;
+
+    const filter = { truckId };
+    if (startDate && endDate) {
+      filter.date = {
+        $gte: new Date(startDate),
+        $lte: new Date(endDate)
+      };
+    }
+
+    const expenses = await FuelExpense.find(filter).sort({ date: -1 });
+    logger.info('Fuel expenses fetched by truck', { truckId, count: expenses.length });
+    res.json(expenses);
+  } catch (error) {
+    logger.error('Error fetching fuel expenses', { error: error.message });
+    res.status(500).json({ message: 'Failed to fetch expenses', error: error.message });
+  }
+});
+
+// Get Fuel Expenses by User
+app.get('/api/expenses/fuel/by-user', async (req, res) => {
+  try {
+    const { userId, startDate, endDate } = req.query;
+
+    const filter = { addedBy: userId };
+    if (startDate && endDate) {
+      filter.date = {
+        $gte: new Date(startDate),
+        $lte: new Date(endDate)
+      };
+    }
+
+    const expenses = await FuelExpense.find(filter).sort({ date: -1 });
+    logger.info('Fuel expenses fetched by user', { userId, count: expenses.length });
+    res.json(expenses);
+  } catch (error) {
+    logger.error('Error fetching fuel expenses', { error: error.message });
+    res.status(500).json({ message: 'Failed to fetch expenses', error: error.message });
+  }
+});
+
+// Get DEF Expenses by Truck
+app.get('/api/expenses/def/by-truck', async (req, res) => {
+  try {
+    const { truckId, startDate, endDate } = req.query;
+
+    const filter = { truckId };
+    if (startDate && endDate) {
+      filter.date = {
+        $gte: new Date(startDate),
+        $lte: new Date(endDate)
+      };
+    }
+
+    const expenses = await DefExpense.find(filter).sort({ date: -1 });
+    logger.info('DEF expenses fetched by truck', { truckId, count: expenses.length });
+    res.json(expenses);
+  } catch (error) {
+    logger.error('Error fetching DEF expenses', { error: error.message });
+    res.status(500).json({ message: 'Failed to fetch expenses', error: error.message });
+  }
+});
+
+// Get DEF Expenses by User
+app.get('/api/expenses/def/by-user', async (req, res) => {
+  try {
+    const { userId, startDate, endDate } = req.query;
+
+    const filter = { addedBy: userId };
+    if (startDate && endDate) {
+      filter.date = {
+        $gte: new Date(startDate),
+        $lte: new Date(endDate)
+      };
+    }
+
+    const expenses = await DefExpense.find(filter).sort({ date: -1 });
+    logger.info('DEF expenses fetched by user', { userId, count: expenses.length });
+    res.json(expenses);
+  } catch (error) {
+    logger.error('Error fetching DEF expenses', { error: error.message });
+    res.status(500).json({ message: 'Failed to fetch expenses', error: error.message });
+  }
+});
+
+// Get Other Expenses by Truck
+app.get('/api/expenses/other/by-truck', async (req, res) => {
+  try {
+    const { truckId, startDate, endDate } = req.query;
+
+    const filter = { truckId };
+    if (startDate && endDate) {
+      filter.date = {
+        $gte: new Date(startDate),
+        $lte: new Date(endDate)
+      };
+    }
+
+    const expenses = await OtherExpense.find(filter).sort({ date: -1 });
+    logger.info('Other expenses fetched by truck', { truckId, count: expenses.length });
+    res.json(expenses);
+  } catch (error) {
+    logger.error('Error fetching other expenses', { error: error.message });
+    res.status(500).json({ message: 'Failed to fetch expenses', error: error.message });
+  }
+});
+
+// Get Other Expenses by User
+app.get('/api/expenses/other/by-user', async (req, res) => {
+  try {
+    const { userId, startDate, endDate } = req.query;
+
+    const filter = { addedBy: userId };
+    if (startDate && endDate) {
+      filter.date = {
+        $gte: new Date(startDate),
+        $lte: new Date(endDate)
+      };
+    }
+
+    const expenses = await OtherExpense.find(filter).sort({ date: -1 });
+    logger.info('Other expenses fetched by user', { userId, count: expenses.length });
+    res.json(expenses);
+  } catch (error) {
+    logger.error('Error fetching other expenses', { error: error.message });
+    res.status(500).json({ message: 'Failed to fetch expenses', error: error.message });
+  }
+});
+
+// Get Total Expenses by Truck - EXACT backend format and logic
+app.get('/api/expenses/total/by-truck', async (req, res) => {
+  try {
+    const { truckId, selectedDates } = req.query;
+    const moment = require('moment');
+
+    if (!truckId) {
+      return res.status(400).json({ message: 'Truck ID is required' });
+    }
+
+    const startDate = selectedDates
+      ? moment.utc(selectedDates[0]).startOf('day').toDate()
+      : null;
+    const endDate = selectedDates
+      ? moment.utc(selectedDates[1]).endOf('day').toDate()
+      : null;
+
+    const query = { truckId };
+
+    if (startDate && endDate) {
+      if (startDate.toDateString() === endDate.toDateString()) {
+        query.date = { $eq: startDate };
+      } else {
+        query.date = { $gte: startDate, $lte: endDate };
+      }
+    }
+
+    const fuelExpenses = (await FuelExpense.find(query).sort({ date: 1 })).map(
+      (expense) => ({
+        ...expense.toObject(),
+        catalog: 'Fuel Expense',
+      })
+    );
+
+    const defExpenses = (await DefExpense.find(query).sort({ date: 1 })).map(
+      (expense) => ({
+        ...expense.toObject(),
+        catalog: 'Def Expense',
+      })
+    );
+
+    const otherExpenses = (
+      await OtherExpense.find(query).sort({ date: 1 })
+    ).map((expense) => ({
+      ...expense.toObject(),
+      catalog: 'Other Expense',
+    }));
+
+    const loanExpenses = (
+      await LoanCalculation.find(query).sort({ date: 1 })
+    ).map((expense) => ({
+      ...expense.toObject(),
+      catalog: 'Loan Expense',
+    }));
+
+    const allExpenses = [...fuelExpenses, ...defExpenses, ...otherExpenses, ...loanExpenses];
+
+    if (allExpenses.length === 0) {
+      return res.status(404).json({
+        message: 'No expenses found for this truck in the given date range',
+      });
+    }
+
+    // EXACT backend logic - fetch truck registration for each expense
+    const formattedExpenses = await Promise.all(
+      allExpenses.map(async (expense) => {
+        // In backend: const truck = await TruckExpense.findById(expense.truckId);
+        // In microservices: query fleet-service
+        const registrationNo = await getTruckRegistration(expense.truckId);
+
+        const date = new Date(expense.date);
+        const formattedDate = moment(date).format('DD-MM-YYYY');
+
+        return {
+          ...expense,
+          date: formattedDate,
+          registrationNo,
+        };
+      })
+    );
+
+    // Sort combined expenses by date
+    formattedExpenses.sort(
+      (a, b) =>
+        new Date(a.date.split('-').reverse().join('-')) -
+        new Date(b.date.split('-').reverse().join('-'))
+    );
+
+    const totalExpense = formattedExpenses.reduce(
+      (sum, expense) => sum + expense.cost,
+      0
+    );
+
+    res.status(200).json({
+      expenses: formattedExpenses,
+      totalExpense,
+    });
+  } catch (error) {
+    console.error('Error retrieving expenses:', error);
+    res.status(500).json({ message: 'Failed to retrieve expenses' });
+  }
+});
+
+// Get Total Expenses by User - EXACT backend format
+app.get('/api/expenses/total/by-user', async (req, res) => {
+  try {
+    const { userId, selectedDates } = req.query;
+    const moment = require('moment');
+
+    logger.info('Fetching total expenses by user ID', { userId, selectedDates });
+
+    if (!userId) {
+      logger.warn('Get total expenses attempted without user ID');
+      return res.status(400).json({ message: 'User ID is required' });
+    }
+
+    // Parse selectedDates array
+    const startDate = selectedDates && Array.isArray(selectedDates)
+      ? moment.utc(selectedDates[0]).startOf('day').toDate()
+      : null;
+    const endDate = selectedDates && Array.isArray(selectedDates)
+      ? moment.utc(selectedDates[1]).endOf('day').toDate()
+      : null;
+
+    const query = { addedBy: userId };
+
+    if (startDate && endDate) {
+      if (startDate.toDateString() === endDate.toDateString()) {
+        query.date = { $eq: startDate };
+      } else {
+        query.date = { $gte: startDate, $lte: endDate };
+      }
+    }
+
+    // Fetch all expense types
+    const fuelExpenses = (await FuelExpense.find(query).sort({ date: 1 })).map(expense => ({
+      ...expense.toObject(),
+      catalog: 'Fuel Expense'
+    }));
+
+    const defExpenses = (await DefExpense.find(query).sort({ date: 1 })).map(expense => ({
+      ...expense.toObject(),
+      catalog: 'Def Expense'
+    }));
+
+    const otherExpenses = (await OtherExpense.find(query).sort({ date: 1 })).map(expense => ({
+      ...expense.toObject(),
+      catalog: 'Other Expense'
+    }));
+
+    const loanExpenses = (await LoanCalculation.find(query).sort({ date: 1 })).map(expense => ({
+      ...expense.toObject(),
+      catalog: 'Loan Expense'
+    }));
+
+    const allExpenses = [...fuelExpenses, ...defExpenses, ...otherExpenses, ...loanExpenses];
+
+    if (allExpenses.length === 0) {
+      logger.info(`No total expenses found for user ${userId}`, { userId, dateRange: selectedDates });
+      return res.status(404).json({
+        message: 'No expenses found for this user in the given date range'
+      });
+    }
+
+    // Fetch registration numbers for all unique truck IDs
+    const uniqueTruckIds = [...new Set(allExpenses.map(e => e.truckId))];
+    const truckRegMap = {};
+
+    await Promise.all(
+      uniqueTruckIds.map(async (truckId) => {
+        truckRegMap[truckId] = await getTruckRegistration(truckId);
+      })
+    );
+
+    // Format expenses with truck registration
+    const formattedExpenses = allExpenses.map(expense => {
+      const date = new Date(expense.date);
+      const formattedDate = moment(date).format('DD-MM-YYYY');
+
+      return {
+        ...expense,
+        date: formattedDate,
+        registrationNo: truckRegMap[expense.truckId] || 'N/A'
+      };
+    });
+
+    // Sort by date
+    formattedExpenses.sort((a, b) =>
+      new Date(a.date.split('-').reverse().join('-')) -
+      new Date(b.date.split('-').reverse().join('-'))
+    );
+
+    const totalExpense = formattedExpenses.reduce((sum, expense) => sum + (expense.cost || 0), 0);
+
+    logger.info(`Retrieved ${formattedExpenses.length} total expenses for user ${userId}`, {
+      userId,
+      count: formattedExpenses.length,
+      totalExpense,
+      dateRange: selectedDates
+    });
+
+    res.status(200).json({
+      expenses: formattedExpenses,
+      totalExpense
+    });
+  } catch (error) {
+    logger.error('Error fetching total expenses', { error: error.message });
+    res.status(500).json({ message: 'Failed to retrieve expenses', error: error.message });
+  }
+});
+
+// Update Expense (generic - finds by ID across all types)
+app.put('/api/expenses/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const updates = req.body;
+
+    // Try each expense type
+    let expense = await FuelExpense.findByIdAndUpdate(id, updates, { new: true });
+    if (!expense) expense = await DefExpense.findByIdAndUpdate(id, updates, { new: true });
+    if (!expense) expense = await OtherExpense.findByIdAndUpdate(id, updates, { new: true });
+
+    if (!expense) {
+      return res.status(404).json({ message: 'Expense not found' });
+    }
+
+    logger.info('Expense updated', { expenseId: id });
+    res.json(expense);
+  } catch (error) {
+    logger.error('Error updating expense', { error: error.message });
+    res.status(500).json({ message: 'Failed to update expense', error: error.message });
+  }
+});
+
+// Delete Expense (generic - finds by ID across all types)
+app.delete('/api/expenses/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    // Try each expense type
+    let expense = await FuelExpense.findByIdAndDelete(id);
+    if (!expense) expense = await DefExpense.findByIdAndDelete(id);
+    if (!expense) expense = await OtherExpense.findByIdAndDelete(id);
+
+    if (!expense) {
+      return res.status(404).json({ message: 'Expense not found' });
+    }
+
+    logger.info('Expense deleted', { expenseId: id });
+    res.json({ message: 'Expense deleted successfully' });
+  } catch (error) {
+    logger.error('Error deleting expense', { error: error.message });
+    res.status(500).json({ message: 'Failed to delete expense', error: error.message });
+  }
+});
+
 // Error handling middleware
 app.use((err, req, res, next) => {
   logger.error('Unhandled error', {
