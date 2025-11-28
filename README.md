@@ -517,7 +517,7 @@ This is an internal project. For questions or issues, contact the development te
 
 ## 👥 Team
 
-- **Brinda S** - [@brindas](https://github.com/brindas)
+- **Brinda S** - [@brindas](https://github.com/BrindaS11)
 - **Eby Tom** - [@ebytom](https://github.com/ebytom)
 - **Govind M J** - [@govindmj](https://github.com/govindmj)
 - **Joyal Devassy** - [@joyaldevassy](https://github.com/joyaldevassy)
