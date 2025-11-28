@@ -1,0 +1,198 @@
+/* Loader Overlay Styles */
+
+.loader-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(255, 255, 255, 0.8);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
+}
+
+.login-loader-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(135deg, #f5f7fa 0%, #d1edde 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
+  animation: fadeIn 0.3s ease-in-out;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.login-loader-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 40px;
+  animation: slideUp 0.5s ease-out;
+}
+
+@keyframes slideUp {
+  from {
+    transform: translateY(30px);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+.login-loader-logo-container {
+  margin-bottom: 24px;
+}
+
+.login-loader-logo-wrapper {
+  width: 100px;
+  height: 100px;
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.login-loader-logo-skeleton {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite;
+  border-radius: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+@keyframes shimmer {
+  0% {
+    background-position: -200% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
+}
+
+.login-loader-logo {
+  width: 100px;
+  height: 100px;
+  object-fit: contain;
+  transition: opacity 0.3s ease, transform 0.3s ease;
+  animation: pulse 2s ease-in-out infinite;
+  filter: drop-shadow(0 4px 12px rgba(26, 165, 75, 0.3));
+}
+
+@keyframes pulse {
+  0%, 100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.05);
+  }
+}
+
+.login-loader-title {
+  font-size: 28px;
+  font-weight: 700;
+  color: #1f2937;
+  margin: 0 0 12px 0;
+  background: linear-gradient(135deg, #1aa54b 0%, #15803a 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  animation: fadeInText 0.6s ease-out 0.2s both;
+}
+
+@keyframes fadeInText {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.login-loader-tagline {
+  font-size: 16px;
+  color: #6b7280;
+  margin: 0 0 32px 0;
+  font-weight: 400;
+  animation: fadeInText 0.6s ease-out 0.3s both;
+}
+
+.login-loader-spinner {
+  margin: 20px 0;
+  animation: fadeInText 0.6s ease-out 0.4s both;
+}
+
+.login-loader-text {
+  font-size: 14px;
+  color: #9ca3af;
+  margin: 16px 0 0 0;
+  font-weight: 500;
+  animation: fadeInText 0.6s ease-out 0.5s both, blink 1.5s ease-in-out infinite;
+}
+
+@keyframes blink {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.6;
+  }
+}
+
+.loader {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Responsive design for smaller screens */
+@media (max-width: 768px) {
+  .login-loader-content {
+    padding: 30px 24px;
+    max-width: 90%;
+  }
+
+  .login-loader-logo-wrapper {
+    width: 80px;
+    height: 80px;
+  }
+
+  .login-loader-logo {
+    width: 80px;
+    height: 80px;
+  }
+
+  .login-loader-title {
+    font-size: 24px;
+  }
+
+  .login-loader-tagline {
+    font-size: 14px;
+  }
+}
