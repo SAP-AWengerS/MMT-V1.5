@@ -1,0 +1,122 @@
+syntax = "proto3";
+
+package analytics;
+
+// Analytics Service - gRPC Interface
+service AnalyticsService {
+  // Get total expenses for a truck within a date range
+  rpc GetTotalExpenses(ExpenseQuery) returns (ExpenseSummary);
+
+  // Get metadata and statistics
+  rpc GetMetadata(MetadataQuery) returns (MetadataResponse);
+
+  // Get dashboard statistics
+  rpc GetDashboardStats(StatsQuery) returns (DashboardStats);
+
+  // Get expense trends over time
+  rpc GetExpenseTrends(TrendQuery) returns (TrendData);
+
+  // Stream real-time analytics updates
+  rpc StreamAnalytics(AnalyticsRequest) returns (stream AnalyticsUpdate);
+}
+
+// Messages
+
+message ExpenseQuery {
+  string truckId = 1;
+  string startDate = 2;
+  string endDate = 3;
+  optional string userId = 4;
+}
+
+message ExpenseSummary {
+  double totalExpenses = 1;
+  double fuelExpenses = 2;
+  double defExpenses = 3;
+  double otherExpenses = 4;
+  double maintenanceExpenses = 5;
+  int32 transactionCount = 6;
+  string period = 7;
+}
+
+message MetadataQuery {
+  optional string userId = 1;
+  string metricType = 2;  // revenue, expenses, profit, etc.
+}
+
+message MetadataResponse {
+  string metricType = 1;
+  double currentValue = 2;
+  double previousValue = 3;
+  double percentageChange = 4;
+  string trend = 5;  // up, down, stable
+  string period = 6;
+  map<string, double> breakdown = 7;
+}
+
+message StatsQuery {
+  string userId = 1;
+  string period = 2;  // daily, weekly, monthly, yearly
+}
+
+message DashboardStats {
+  int32 totalTrucks = 1;
+  int32 activeTrucks = 2;
+  int32 totalDrivers = 3;
+  double totalRevenue = 4;
+  double totalExpenses = 5;
+  double netProfit = 6;
+  double profitMargin = 7;
+  repeated TruckPerformance topPerformingTrucks = 8;
+  ExpenseBreakdown expenseBreakdown = 9;
+}
+
+message TruckPerformance {
+  string truckId = 1;
+  string truckNumber = 2;
+  double revenue = 3;
+  double expenses = 4;
+  double profit = 5;
+  int32 trips = 6;
+}
+
+message ExpenseBreakdown {
+  double fuel = 1;
+  double def = 2;
+  double maintenance = 3;
+  double other = 4;
+}
+
+message TrendQuery {
+  string userId = 1;
+  string metricType = 2;
+  string startDate = 3;
+  string endDate = 4;
+  string granularity = 5;  // daily, weekly, monthly
+}
+
+message TrendData {
+  string metricType = 1;
+  repeated DataPoint dataPoints = 2;
+  double average = 3;
+  double min = 4;
+  double max = 5;
+}
+
+message DataPoint {
+  string date = 1;
+  double value = 2;
+  string label = 3;
+}
+
+message AnalyticsRequest {
+  string userId = 1;
+  repeated string metrics = 2;
+}
+
+message AnalyticsUpdate {
+  string timestamp = 1;
+  string metric = 2;
+  double value = 3;
+  string change = 4;
+}
