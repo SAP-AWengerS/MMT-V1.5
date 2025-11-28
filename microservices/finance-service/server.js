@@ -824,6 +824,123 @@ app.get('/api/expenses/total/download-all', (req, res) => {
   res.status(501).json({ message: 'Excel download not yet implemented' });
 });
 
+// ==================== LOAN CALCULATION ROUTES ====================
+
+// Add Loan Calculation
+app.post('/api/calculate-loan', async (req, res) => {
+  try {
+    const { truckId, addedBy, date, cost, additionalCharges, note } = req.body;
+
+    const loan = new LoanCalculation({
+      truckId,
+      addedBy,
+      date: new Date(date),
+      cost,
+      additionalCharges,
+      note
+    });
+
+    await loan.save();
+    logger.info('Loan calculation added', { loanId: loan._id, truckId, cost });
+    res.status(201).json(loan);
+  } catch (error) {
+    logger.error('Error adding loan calculation', { error: error.message });
+    res.status(500).json({ message: 'Failed to add loan calculation', error: error.message });
+  }
+});
+
+// Get Loan Calculations by Truck
+app.get('/api/calculate-loan/by-truck', async (req, res) => {
+  try {
+    const { truckId, startDate, endDate } = req.query;
+
+    const filter = { truckId };
+    if (startDate && endDate) {
+      filter.date = {
+        $gte: new Date(startDate),
+        $lte: new Date(endDate)
+      };
+    }
+
+    const loans = await LoanCalculation.find(filter).sort({ date: -1 });
+    logger.info('Loan calculations fetched by truck', { truckId, count: loans.length });
+    res.json(loans);
+  } catch (error) {
+    logger.error('Error fetching loan calculations', { error: error.message });
+    res.status(500).json({ message: 'Failed to fetch loan calculations', error: error.message });
+  }
+});
+
+// Get Loan Calculations by User
+app.get('/api/calculate-loan/by-user', async (req, res) => {
+  try {
+    const { userId, startDate, endDate } = req.query;
+
+    const filter = { addedBy: userId };
+    if (startDate && endDate) {
+      filter.date = {
+        $gte: new Date(startDate),
+        $lte: new Date(endDate)
+      };
+    }
+
+    const loans = await LoanCalculation.find(filter).sort({ date: -1 });
+    logger.info('Loan calculations fetched by user', { userId, count: loans.length });
+    res.json(loans);
+  } catch (error) {
+    logger.error('Error fetching loan calculations', { error: error.message });
+    res.status(500).json({ message: 'Failed to fetch loan calculations', error: error.message });
+  }
+});
+
+// Update Loan Calculation
+app.put('/api/calculate-loan/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const updates = req.body;
+
+    const loan = await LoanCalculation.findByIdAndUpdate(id, updates, { new: true });
+
+    if (!loan) {
+      return res.status(404).json({ message: 'Loan calculation not found' });
+    }
+
+    logger.info('Loan calculation updated', { loanId: id });
+    res.json(loan);
+  } catch (error) {
+    logger.error('Error updating loan calculation', { error: error.message });
+    res.status(500).json({ message: 'Failed to update loan calculation', error: error.message });
+  }
+});
+
+// Delete Loan Calculation
+app.delete('/api/calculate-loan/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const loan = await LoanCalculation.findByIdAndDelete(id);
+
+    if (!loan) {
+      return res.status(404).json({ message: 'Loan calculation not found' });
+    }
+
+    logger.info('Loan calculation deleted', { loanId: id });
+    res.json({ message: 'Loan calculation deleted successfully' });
+  } catch (error) {
+    logger.error('Error deleting loan calculation', { error: error.message });
+    res.status(500).json({ message: 'Failed to delete loan calculation', error: error.message });
+  }
+});
+
+// Loan Calculation Excel Placeholders
+app.get('/api/calculate-loan/download', (req, res) => {
+  res.status(501).json({ message: 'Excel download not yet implemented' });
+});
+
+app.get('/api/calculate-loan/download-all', (req, res) => {
+  res.status(501).json({ message: 'Excel download not yet implemented' });
+});
+
 // Error handling middleware
 app.use((err, req, res, next) => {
   logger.error('Unhandled error', {
