@@ -1,0 +1,68 @@
+# Persistent Volumes for MongoDB and RabbitMQ
+# Note: This uses local storage. For production, use cloud provider storage classes.
+---
+# MongoDB Persistent Volume
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: mongodb-pv
+  labels:
+    type: local
+    app: mongodb
+spec:
+  storageClassName: manual
+  capacity:
+    storage: 10Gi
+  accessModes:
+    - ReadWriteOnce
+  hostPath:
+    path: "/mnt/data/mongodb"
+---
+# MongoDB Persistent Volume Claim
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: mongodb-pvc
+  namespace: mmt
+  labels:
+    app: mongodb
+spec:
+  storageClassName: manual
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 10Gi
+---
+# RabbitMQ Persistent Volume
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: rabbitmq-pv
+  labels:
+    type: local
+    app: rabbitmq
+spec:
+  storageClassName: manual
+  capacity:
+    storage: 5Gi
+  accessModes:
+    - ReadWriteOnce
+  hostPath:
+    path: "/mnt/data/rabbitmq"
+---
+# RabbitMQ Persistent Volume Claim
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: rabbitmq-pvc
+  namespace: mmt
+  labels:
+    app: rabbitmq
+spec:
+  storageClassName: manual
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 5Gi
