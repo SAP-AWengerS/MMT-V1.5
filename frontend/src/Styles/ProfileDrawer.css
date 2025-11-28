@@ -1,0 +1,66 @@
+/* Profile Drawer Styles */
+
+.profile-drawer-container {
+  position: fixed !important;
+  top: 0 !important;
+  right: -320px !important;
+  height: 100vh !important;
+  width: 320px !important;
+  flex-shrink: 0 !important;
+  background: #f6f6f6 !important;
+  padding: 20px 0;
+  overflow-y: auto !important;
+  border-radius: 20px 0 0 20px !important;
+  box-shadow: -2px 0 8px rgba(0, 0, 0, 0.15) !important;
+  z-index: 1502 !important;
+  transition: right 0.3s ease-in-out !important;
+
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+}
+
+.profile-drawer-container.profile-drawer-mobile {
+  right: 0 !important;
+}
+
+.profile-drawer-top {
+  padding-left: 20px;
+  padding-right: 20px;
+  flex: 1;
+}
+
+.profile-drawer-bottom {
+  padding-left: 20px;
+  padding-right: 20px;
+}
+
+.profile-btn-group .btn {
+  width: 100%;
+  margin-bottom: 8px;
+  border-radius: 8px;
+  padding: 10px 15px;
+  font-size: 14px;
+  font-weight: 500;
+  border: 1px solid #d9d9d9;
+  background: #fff;
+  color: #555;
+  transition: all 0.2s ease;
+}
+
+.profile-btn-group .btn:hover {
+  background: #eaeaea;
+  border-color: #b5b5b5;
+  color: #222;
+}
+
+.profile-btn-group .btn-danger {
+  background: linear-gradient(135deg, #ff4d4f 0%, #cf1322 100%) !important;
+  border: none !important;
+  color: #fff !important;
+}
+
+.profile-btn-group .btn-danger:hover {
+  background: linear-gradient(135deg, #ff7875 0%, #f5222d 100%) !important;
+  box-shadow: 0 2px 8px rgba(255, 77, 79, 0.3) !important;
+}
