@@ -76,3 +76,14 @@ const connectDB = async () => {
     process.exit(1);
   }
 };
+
+// Health check
+app.get('/health', (req, res) => {
+  const healthcheck = {
+    status: 'UP',
+    timestamp: new Date().toISOString(),
+    service: 'finance-service',
+    database: mongoose.connection.readyState === 1 ? 'connected' : 'disconnected'
+  };
+  res.status(healthcheck.database === 'connected' ? 200 : 503).json(healthcheck);
+});
