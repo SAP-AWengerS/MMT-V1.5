@@ -48,6 +48,94 @@ const connectDB = async () => {
   }
 };
 
+// GraphQL Type Definitions
+const typeDefs = `#graphql
+  type Income {
+    id: ID!
+    truckId: ID!
+    userId: ID!
+    amount: Float!
+    source: String!
+    date: String!
+    description: String
+    createdAt: String!
+  }
+
+  type Expense {
+    id: ID!
+    truckId: ID!
+    userId: ID!
+    amount: Float!
+    category: String!
+    quantity: Float
+    pricePerUnit: Float
+    station: String
+    date: String!
+    description: String
+    createdAt: String!
+  }
+
+  type ExpenseSummary {
+    totalExpenses: Float!
+    fuelExpenses: Float!
+    defExpenses: Float!
+    otherExpenses: Float!
+    maintenanceExpenses: Float!
+    breakdown: [ExpenseBreakdown!]!
+    period: String!
+    transactionCount: Int!
+  }
+
+  type ExpenseBreakdown {
+    category: String!
+    amount: Float!
+    percentage: Float!
+    count: Int!
+  }
+
+  type ExpenseDetails {
+    fuelExpenses: [Expense!]!
+    defExpenses: [Expense!]!
+    otherExpenses: [Expense!]!
+    maintenanceExpenses: [Expense!]!
+    total: Float!
+  }
+
+  type Query {
+    getTotalExpenses(truckId: ID!, startDate: String!, endDate: String!): ExpenseSummary!
+    getIncomeByTruck(truckId: ID!, startDate: String, endDate: String): [Income!]!
+    getExpensesByTruck(truckId: ID!, startDate: String, endDate: String): ExpenseDetails!
+    getIncome(userId: ID): [Income!]!
+    getExpenses(userId: ID): [Expense!]!
+  }
+
+  type Mutation {
+    addIncome(
+      truckId: ID!
+      userId: ID!
+      amount: Float!
+      source: String!
+      date: String!
+      description: String
+    ): Income!
+
+    addExpense(
+      truckId: ID!
+      userId: ID!
+      amount: Float!
+      category: String!
+      quantity: Float
+      pricePerUnit: Float
+      station: String
+      date: String!
+      description: String
+    ): Expense!
+
+    deleteIncome(id: ID!): Boolean!
+    deleteExpense(id: ID!): Boolean!
+  }
+`;
+
 // Start server
 const startServer = async () => {
   await connectDB();
