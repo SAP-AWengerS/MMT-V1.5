@@ -3,6 +3,7 @@ const mongoose = require('mongoose');
 const cors = require('cors');
 const winston = require('winston');
 const axios = require('axios');
+const amqp = require('amqplib');
 require('dotenv').config();
 
 const Income = require('./models/Income');
@@ -15,6 +16,10 @@ const Expense = require('./models/Expense');
 const app = express();
 const PORT = process.env.PORT || 3003;
 const FLEET_SERVICE_URL = process.env.FLEET_SERVICE_URL || 'http://localhost:3002';
+
+// RabbitMQ connection
+let rabbitChannel = null;
+let rabbitConnection = null;
 
 // Logger configuration
 const logger = winston.createLogger({
@@ -29,6 +34,92 @@ const logger = winston.createLogger({
     new winston.transports.File({ filename: 'finance.log' })
   ]
 });
+
+// ==================== RABBITMQ PRODUCER ====================
+
+const connectRabbitMQ = async () => {
+  try {
+    const RABBITMQ_URL = process.env.RABBITMQ_URL || 'amqp://admin:password@localhost:5672';
+
+    rabbitConnection = await amqp.connect(RABBITMQ_URL);
+    rabbitChannel = await rabbitConnection.createChannel();
+
+    // Declare exchange for events
+    await rabbitChannel.assertExchange('mmt_events', 'topic', { durable: true });
+
+    logger.info('RabbitMQ connected for publishing', {
+      url: RABBITMQ_URL.replace(/\/\/.*@/, '//****@'), // Hide credentials in logs
+      exchange: 'mmt_events'
+    });
+
+    console.log('🐰 RabbitMQ Producer connected');
+    console.log('📤 Ready to publish events to exchange: mmt_events');
+
+    // Handle connection errors
+    rabbitConnection.on('error', (error) => {
+      logger.error('RabbitMQ connection error', { error: error.message });
+    });
+
+    rabbitConnection.on('close', () => {
+      logger.warn('RabbitMQ connection closed, attempting to reconnect...');
+      setTimeout(connectRabbitMQ, 5000);
+    });
+
+  } catch (error) {
+    logger.error('Failed to connect to RabbitMQ', {
+      error: error.message,
+      stack: error.stack
+    });
+    console.error('❌ RabbitMQ connection failed:', error.message);
+    console.log('⏳ Will retry RabbitMQ connection in 10 seconds...');
+    setTimeout(connectRabbitMQ, 10000);
+  }
+};
+
+// Publish event to RabbitMQ
+const publishEvent = async (routingKey, eventType, data) => {
+  try {
+    if (!rabbitChannel) {
+      logger.warn('RabbitMQ channel not available, event not published', {
+        routingKey,
+        eventType
+      });
+      return false;
+    }
+
+    const event = {
+      type: eventType,
+      timestamp: new Date().toISOString(),
+      data
+    };
+
+    const message = Buffer.from(JSON.stringify(event));
+
+    rabbitChannel.publish(
+      'mmt_events',
+      routingKey,
+      message,
+      { persistent: true }
+    );
+
+    logger.info('Event published to RabbitMQ', {
+      routingKey,
+      eventType,
+      dataKeys: Object.keys(data)
+    });
+
+    console.log(`📤 Published event: ${eventType} (routing: ${routingKey})`);
+    return true;
+
+  } catch (error) {
+    logger.error('Failed to publish event to RabbitMQ', {
+      error: error.message,
+      routingKey,
+      eventType
+    });
+    return false;
+  }
+};
 
 // Helper function to fetch truck registration number
 const getTruckRegistration = async (truckId) => {
@@ -355,7 +446,7 @@ app.get('/api/incomes/download-all', async (req, res) => {
 
 // ==================== EXPENSE ROUTES (Unified) ====================
 
-// Add Expense (handles fuel, def, other)
+// Add Expense (handles fuel, def, other) - WITH RABBITMQ INTEGRATION
 app.post('/api/expenses', async (req, res) => {
   try {
     const { type, addedBy, truckId, amount, category, quantity, pricePerUnit, station, date, description, otherType,
@@ -363,35 +454,39 @@ app.post('/api/expenses', async (req, res) => {
 
     let expense;
     const expenseType = type || category;
+    let expenseCost = 0;
 
     if (expenseType === 'fuel') {
+      expenseCost = cost || amount || (quantity * pricePerUnit) || 0;
       expense = new FuelExpense({
         addedBy,
         truckId,
         currentKM: currentKM || 0,
         litres: litres || quantity || 0,
-        cost: cost || amount || (quantity * pricePerUnit) || 0,
+        cost: expenseCost,
         date: new Date(date),
         note: note || description || ''
       });
     } else if (expenseType === 'def') {
       // DEF uses same fields as Fuel: cost, litres, currentKM
+      expenseCost = cost || amount || (quantity * pricePerUnit) || 0;
       expense = new DefExpense({
         addedBy,
         truckId,
         currentKM: currentKM || 0,
         litres: litres || quantity || 0,
-        cost: cost || amount || (quantity * pricePerUnit) || 0,
+        cost: expenseCost,
         date: new Date(date),
         note: note || description || ''
       });
     } else {
       // Other expenses - match OtherExpense model fields
+      expenseCost = cost || amount || 0;
       expense = new OtherExpense({
         addedBy,
         truckId,
         category: category || 'Other',           // Required field
-        cost: cost || amount || 0,               // Required field (not 'amount')
+        cost: expenseCost,                       // Required field (not 'amount')
         date: new Date(date),
         note: note || description || '',         // Optional field (not 'description')
         other: otherType || ''                   // Optional field
@@ -399,7 +494,36 @@ app.post('/api/expenses', async (req, res) => {
     }
 
     await expense.save();
-    logger.info('Expense added', { expenseId: expense._id, type: expenseType });
+    logger.info('Expense added', { expenseId: expense._id, type: expenseType, cost: expenseCost });
+
+    // ============ RABBITMQ: Publish high cost expense event ============
+    // If expense cost exceeds threshold ($5000), publish event for alert creation
+    const HIGH_COST_THRESHOLD = 5000;
+    if (expenseCost > HIGH_COST_THRESHOLD) {
+      logger.info('High cost expense detected, publishing event', {
+        expenseId: expense._id,
+        cost: expenseCost,
+        threshold: HIGH_COST_THRESHOLD
+      });
+
+      await publishEvent(
+        'expense.high_cost',
+        'expense.high_cost',
+        {
+          expenseId: expense._id.toString(),
+          userId: addedBy,
+          truckId: truckId,
+          expenseType: expenseType,
+          amount: expenseCost,
+          date: date,
+          threshold: HIGH_COST_THRESHOLD
+        }
+      );
+
+      console.log(`⚠️  High cost expense: $${expenseCost} > $${HIGH_COST_THRESHOLD} - Event published!`);
+    }
+    // ================================================================
+
     res.status(201).json(expense);
   } catch (error) {
     logger.error('Error adding expense', { error: error.message });
@@ -1271,6 +1395,9 @@ app.use((err, req, res, next) => {
 // Start server
 const startServer = async () => {
   await connectDB();
+
+  // Connect to RabbitMQ for event publishing
+  await connectRabbitMQ();
 
   app.listen(PORT, () => {
     logger.info(`Finance Service REST API running on port ${PORT}`, {

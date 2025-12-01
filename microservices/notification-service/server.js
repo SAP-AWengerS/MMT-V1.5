@@ -2,6 +2,7 @@ const express = require('express');
 const mongoose = require('mongoose');
 const cors = require('cors');
 const winston = require('winston');
+const amqp = require('amqplib');
 require('dotenv').config();
 
 const Alert = require('./models/Alert');
@@ -778,9 +779,201 @@ app.use((err, req, res, next) => {
   });
 });
 
+// ==================== RABBITMQ CONSUMER ====================
+
+let rabbitChannel = null;
+let rabbitConnection = null;
+
+const connectRabbitMQ = async () => {
+  try {
+    const RABBITMQ_URL = process.env.RABBITMQ_URL || 'amqp://admin:password@localhost:5672';
+
+    rabbitConnection = await amqp.connect(RABBITMQ_URL);
+    rabbitChannel = await rabbitConnection.createChannel();
+
+    // Declare exchange for events
+    await rabbitChannel.assertExchange('mmt_events', 'topic', { durable: true });
+
+    // Declare queue for notifications
+    await rabbitChannel.assertQueue('notification_queue', { durable: true });
+
+    // Bind queue to exchange with routing patterns
+    await rabbitChannel.bindQueue('notification_queue', 'mmt_events', 'expense.*');
+    await rabbitChannel.bindQueue('notification_queue', 'mmt_events', 'alert.*');
+
+    logger.info('RabbitMQ connected', {
+      url: RABBITMQ_URL.replace(/\/\/.*@/, '//****@'), // Hide credentials in logs
+      exchange: 'mmt_events',
+      queue: 'notification_queue'
+    });
+
+    console.log('🐰 RabbitMQ Consumer connected');
+    console.log('📥 Listening for events on queue: notification_queue');
+
+    // Start consuming messages
+    rabbitChannel.consume('notification_queue', async (msg) => {
+      if (msg !== null) {
+        try {
+          const event = JSON.parse(msg.content.toString());
+          logger.info('Received event from RabbitMQ', {
+            type: event.type,
+            timestamp: event.timestamp
+          });
+
+          // Process different event types
+          await processEvent(event);
+
+          // Acknowledge message
+          rabbitChannel.ack(msg);
+          logger.info('Event processed and acknowledged', { type: event.type });
+        } catch (error) {
+          logger.error('Error processing RabbitMQ message', {
+            error: error.message,
+            stack: error.stack
+          });
+          // Reject message and requeue (will be retried)
+          rabbitChannel.nack(msg, false, true);
+        }
+      }
+    });
+
+    // Handle connection errors
+    rabbitConnection.on('error', (error) => {
+      logger.error('RabbitMQ connection error', { error: error.message });
+    });
+
+    rabbitConnection.on('close', () => {
+      logger.warn('RabbitMQ connection closed, attempting to reconnect...');
+      setTimeout(connectRabbitMQ, 5000); // Retry after 5 seconds
+    });
+
+  } catch (error) {
+    logger.error('Failed to connect to RabbitMQ', {
+      error: error.message,
+      stack: error.stack
+    });
+    console.error('❌ RabbitMQ connection failed:', error.message);
+    console.log('⏳ Will retry RabbitMQ connection in 10 seconds...');
+    // Retry connection after 10 seconds
+    setTimeout(connectRabbitMQ, 10000);
+  }
+};
+
+// Process events based on type
+const processEvent = async (event) => {
+  switch (event.type) {
+    case 'expense.high_cost':
+      await handleHighCostExpense(event.data);
+      break;
+
+    case 'expense.threshold.exceeded':
+      await handleExpenseThresholdExceeded(event.data);
+      break;
+
+    case 'alert.created':
+      logger.info('Alert creation notification received', { alertId: event.data.alertId });
+      // Could send email, SMS, push notification, etc.
+      break;
+
+    default:
+      logger.warn('Unknown event type received', { type: event.type });
+  }
+};
+
+// Handle high cost expense event - Create alert automatically
+const handleHighCostExpense = async (data) => {
+  try {
+    const { userId, truckId, expenseType, amount, date } = data;
+
+    logger.info('Processing high cost expense event', {
+      userId,
+      truckId,
+      expenseType,
+      amount
+    });
+
+    // Create alert for high cost expense
+    const alert = new Alert({
+      addedBy: userId,
+      title: `High Cost ${expenseType} Expense Alert`,
+      description: `A ${expenseType} expense of $${amount.toFixed(2)} was recorded, which exceeds the threshold of $5000. Please review this transaction.`,
+      alertDate: new Date(date),
+      type: 'fuel', // Map to alert type
+      priority: 'high',
+      truckId: truckId,
+      isRead: false,
+      isActive: true
+    });
+
+    await alert.save();
+
+    logger.info('Alert created from RabbitMQ event', {
+      alertId: alert._id,
+      userId,
+      truckId,
+      amount,
+      expenseType
+    });
+
+    console.log(`✅ Auto-created alert for high cost expense: $${amount} (Alert ID: ${alert._id})`);
+
+  } catch (error) {
+    logger.error('Failed to create alert from high cost expense event', {
+      error: error.message,
+      data
+    });
+    throw error; // Re-throw to trigger message requeue
+  }
+};
+
+// Handle expense threshold exceeded event
+const handleExpenseThresholdExceeded = async (data) => {
+  try {
+    const { userId, truckId, amount, threshold, expenseType } = data;
+
+    logger.info('Processing expense threshold exceeded event', {
+      userId,
+      truckId,
+      amount,
+      threshold
+    });
+
+    const alert = new Alert({
+      addedBy: userId,
+      title: `Expense Threshold Exceeded`,
+      description: `${expenseType} expense of $${amount} exceeds the threshold of $${threshold}. Immediate review required.`,
+      alertDate: new Date(),
+      type: 'payment',
+      priority: 'urgent',
+      truckId: truckId,
+      isRead: false,
+      isActive: true
+    });
+
+    await alert.save();
+
+    logger.info('Alert created for threshold exceeded', {
+      alertId: alert._id,
+      userId,
+      amount,
+      threshold
+    });
+
+  } catch (error) {
+    logger.error('Failed to create alert from threshold exceeded event', {
+      error: error.message,
+      data
+    });
+    throw error;
+  }
+};
+
 // Start server
 const startServer = async () => {
   await connectDB();
+
+  // Start RabbitMQ consumer
+  await connectRabbitMQ();
 
   app.listen(PORT, () => {
     logger.info(`Notification Service running on port ${PORT}`, {
